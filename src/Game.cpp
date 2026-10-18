@@ -8,7 +8,7 @@ Game::Game()
       mode(GameMode::TwoPlayer), 
       aiDepth(3) 
 {
-    board.initStandardPosition();
+    reset();
 }
 
 static std::string trimAndClean(const std::string& str) {
@@ -241,8 +241,23 @@ bool Game::processMove(const std::string& rawInput) {
         return false;
     }
 
+    Board beforeBoard = board;
+    std::string sanStr = toSAN(selectedMove, beforeBoard);
+    std::string uciStr = selectedMove.from.toAlgebraic() + selectedMove.to.toAlgebraic();
+    if (selectedMove.flag == MoveFlag::Promotion) {
+        char promo = 'q';
+        if (selectedMove.promotionType == PieceType::Rook) promo = 'r';
+        else if (selectedMove.promotionType == PieceType::Bishop) promo = 'b';
+        else if (selectedMove.promotionType == PieceType::Knight) promo = 'n';
+        uciStr += promo;
+    }
+
     // Apply the valid move
     board.makeMove(selectedMove);
+
+    boardHistory.push_back(beforeBoard);
+    moveHistoryUCI.push_back(uciStr);
+    moveHistorySAN.push_back(sanStr);
 
     // Evaluate game status
     Color nextSide = board.getSideToMove();
@@ -257,11 +272,15 @@ bool Game::processMove(const std::string& rawInput) {
     return true;
 }
 
+Move Game::computeAIMove(int depth) {
+    return ai.findBestMove(board, depth);
+}
+
 void Game::makeAIMove() {
     if (isGameOver()) return;
 
     std::cout << "\n🤖 Computer is thinking (depth " << aiDepth << ")...\n";
-    Move bestMove = ai.findBestMove(board, aiDepth);
+    Move bestMove = computeAIMove(aiDepth);
 
     if (!bestMove.from.isValid() || !bestMove.to.isValid()) {
         std::cout << "No moves found!\n";
@@ -276,22 +295,20 @@ void Game::makeAIMove() {
     if (!symbol.empty()) std::cout << " (" << symbol << ")";
     std::cout << " [Searched " << ai.getNodesEvaluated() << " positions]\n\n";
 
-    board.makeMove(bestMove);
-
-    // Evaluate game status
-    Color nextSide = board.getSideToMove();
-    if (board.isCheckmate(nextSide)) {
-        state = GameState::Checkmate;
-    } else if (board.isStalemate(nextSide)) {
-        state = GameState::Stalemate;
-    } else if (board.getHalfMoveClock() >= 100) {
-        state = GameState::DrawFiftyMoves;
+    std::string uciStr = bestMove.from.toAlgebraic() + bestMove.to.toAlgebraic();
+    if (bestMove.flag == MoveFlag::Promotion) {
+        char promo = 'q';
+        if (bestMove.promotionType == PieceType::Rook) promo = 'r';
+        else if (bestMove.promotionType == PieceType::Bishop) promo = 'b';
+        else if (bestMove.promotionType == PieceType::Knight) promo = 'n';
+        uciStr += promo;
     }
+
+    processMove(uciStr);
 }
 
 void Game::start() {
-    board.initStandardPosition();
-    state = GameState::Ongoing;
+    reset();
 
     std::cout << "========================================\n";
     std::cout << "        WELCOME TO CHESS (SHATRANJ)     \n";
@@ -425,5 +442,403 @@ void Game::start() {
         std::cout << "\n========================================\n";
         std::cout << "  DRAW by 50-move rule!\n";
         std::cout << "========================================\n";
+    }
+}
+
+void Game::reset() {
+    board.initStandardPosition();
+    state = GameState::Ongoing;
+    boardHistory.clear();
+    moveHistoryUCI.clear();
+    moveHistorySAN.clear();
+}
+
+bool Game::undo() {
+    if (boardHistory.empty()) return false;
+    board = boardHistory.back();
+    boardHistory.pop_back();
+    if (!moveHistoryUCI.empty()) moveHistoryUCI.pop_back();
+    if (!moveHistorySAN.empty()) moveHistorySAN.pop_back();
+
+    Color next = board.getSideToMove();
+    if (board.isCheckmate(next)) {
+        state = GameState::Checkmate;
+    } else if (board.isStalemate(next)) {
+        state = GameState::Stalemate;
+    } else if (board.getHalfMoveClock() >= 100) {
+        state = GameState::DrawFiftyMoves;
+    } else {
+        state = GameState::Ongoing;
+    }
+    return true;
+}
+
+std::string Game::toSAN(const Move& m, const Board& before) const {
+    if (m.flag == MoveFlag::CastleKingside) return "O-O";
+    if (m.flag == MoveFlag::CastleQueenside) return "O-O-O";
+
+    const Piece* piece = before.getPieceAt(m.from);
+    if (!piece) return m.from.toAlgebraic() + m.to.toAlgebraic();
+
+    std::string san;
+    PieceType ptype = piece->getType();
+
+    if (ptype == PieceType::Pawn) {
+        if (m.from.file != m.to.file || m.flag == MoveFlag::EnPassant) {
+            san += static_cast<char>('a' + m.from.file);
+            san += "x";
+        }
+        san += m.to.toAlgebraic();
+        if (m.flag == MoveFlag::Promotion) {
+            san += "=";
+            switch (m.promotionType) {
+                case PieceType::Queen:  san += "Q"; break;
+                case PieceType::Rook:   san += "R"; break;
+                case PieceType::Bishop: san += "B"; break;
+                case PieceType::Knight: san += "N"; break;
+                default: san += "Q"; break;
+            }
+        }
+    } else {
+        switch (ptype) {
+            case PieceType::Knight: san += "N"; break;
+            case PieceType::Bishop: san += "B"; break;
+            case PieceType::Rook:   san += "R"; break;
+            case PieceType::Queen:  san += "Q"; break;
+            case PieceType::King:   san += "K"; break;
+            default: break;
+        }
+
+        // Disambiguation
+        auto legal = before.generateLegalMoves();
+        bool sameTypeDiffPos = false;
+        bool sameFile = false;
+        bool sameRank = false;
+
+        for (const auto& other : legal) {
+            if (other.from == m.from) continue;
+            if (other.to != m.to) continue;
+            const Piece* op = before.getPieceAt(other.from);
+            if (op && op->getType() == ptype && op->getColor() == piece->getColor()) {
+                sameTypeDiffPos = true;
+                if (other.from.file == m.from.file) sameFile = true;
+                if (other.from.rank == m.from.rank) sameRank = true;
+            }
+        }
+
+        if (sameTypeDiffPos) {
+            if (!sameFile) {
+                san += static_cast<char>('a' + m.from.file);
+            } else if (!sameRank) {
+                san += static_cast<char>('1' + m.from.rank);
+            } else {
+                san += static_cast<char>('a' + m.from.file);
+                san += static_cast<char>('1' + m.from.rank);
+            }
+        }
+
+        if (before.getPieceAt(m.to) != nullptr) {
+            san += "x";
+        }
+        san += m.to.toAlgebraic();
+    }
+
+    // Check / Checkmate suffix
+    Board after = before;
+    after.makeMove(m);
+    Color opp = after.getSideToMove();
+    if (after.isCheckmate(opp)) {
+        san += "#";
+    } else if (after.isInCheck(opp)) {
+        san += "+";
+    }
+
+    return san;
+}
+
+std::string Game::exportPGN() const {
+    std::string pgn;
+    pgn += "[Event \"Shatranj Match\"]\n";
+    pgn += "[Site \"Localhost\"]\n";
+    pgn += "[Date \"2026.10.18\"]\n";
+    pgn += "[Round \"1\"]\n";
+    pgn += "[White \"White\"]\n";
+    pgn += "[Black \"Black\"]\n";
+
+    std::string result = "*";
+    if (state == GameState::Checkmate) {
+        result = (board.getSideToMove() == Color::White) ? "0-1" : "1-0";
+    } else if (state == GameState::Stalemate || state == GameState::DrawFiftyMoves) {
+        result = "1/2-1/2";
+    } else if (state == GameState::Resigned) {
+        result = (board.getSideToMove() == Color::White) ? "0-1" : "1-0";
+    }
+    pgn += "[Result \"" + result + "\"]\n\n";
+
+    for (size_t i = 0; i < moveHistorySAN.size(); ++i) {
+        if (i % 2 == 0) {
+            pgn += std::to_string(i / 2 + 1) + ". ";
+        }
+        pgn += moveHistorySAN[i] + " ";
+    }
+    pgn += result + "\n";
+    return pgn;
+}
+
+static std::string extractJsonString(const std::string& json, const std::string& key) {
+    std::string needle = "\"" + key + "\"";
+    size_t searchPos = 0;
+    while (true) {
+        size_t pos = json.find(needle, searchPos);
+        if (pos == std::string::npos) return "";
+        size_t colonPos = pos + needle.length();
+        while (colonPos < json.length() && (json[colonPos] == ' ' || json[colonPos] == '\t')) ++colonPos;
+        if (colonPos < json.length() && json[colonPos] == ':') {
+            size_t valPos = colonPos + 1;
+            while (valPos < json.length() && (json[valPos] == ' ' || json[valPos] == '\t')) ++valPos;
+            if (valPos < json.length() && json[valPos] == '"') {
+                ++valPos;
+                size_t end = json.find('"', valPos);
+                if (end != std::string::npos) {
+                    return json.substr(valPos, end - valPos);
+                }
+            }
+            return "";
+        }
+        searchPos = pos + 1;
+    }
+}
+
+static int extractJsonInt(const std::string& json, const std::string& key, int defaultVal) {
+    std::string needle = "\"" + key + "\"";
+    size_t searchPos = 0;
+    while (true) {
+        size_t pos = json.find(needle, searchPos);
+        if (pos == std::string::npos) return defaultVal;
+        size_t colonPos = pos + needle.length();
+        while (colonPos < json.length() && (json[colonPos] == ' ' || json[colonPos] == '\t')) ++colonPos;
+        if (colonPos < json.length() && json[colonPos] == ':') {
+            size_t valPos = colonPos + 1;
+            while (valPos < json.length() && (json[valPos] == ' ' || json[valPos] == '\t')) ++valPos;
+            std::string numStr;
+            if (valPos < json.length() && (json[valPos] == '-' || std::isdigit(static_cast<unsigned char>(json[valPos])))) {
+                numStr += json[valPos++];
+                while (valPos < json.length() && std::isdigit(static_cast<unsigned char>(json[valPos]))) {
+                    numStr += json[valPos++];
+                }
+                try {
+                    return std::stoi(numStr);
+                } catch (...) {
+                    return defaultVal;
+                }
+            }
+            return defaultVal;
+        }
+        searchPos = pos + 1;
+    }
+}
+
+static std::string escapeJson(const std::string& s) {
+    std::string out;
+    for (char c : s) {
+        if (c == '"') out += "\\\"";
+        else if (c == '\\') out += "\\\\";
+        else if (c == '\n') out += "\\n";
+        else if (c == '\r') out += "\\r";
+        else if (c == '\t') out += "\\t";
+        else out += c;
+    }
+    return out;
+}
+
+static std::string buildStateResponse(const Board& b, GameState st, const std::vector<std::string>& sanHist, const std::vector<std::string>& uciHist, const std::string& pgn) {
+    std::string json = "{";
+    json += "\"ok\":true,";
+    json += "\"fen\":\"" + escapeJson(b.toFEN()) + "\",";
+    json += "\"sideToMove\":\"" + std::string(b.getSideToMove() == Color::White ? "white" : "black") + "\",";
+    json += "\"inCheck\":" + std::string(b.isInCheck(b.getSideToMove()) ? "true" : "false") + ",";
+
+    std::string statusStr = "ongoing";
+    if (st == GameState::Checkmate) statusStr = "checkmate";
+    else if (st == GameState::Stalemate) statusStr = "stalemate";
+    else if (st == GameState::Resigned) statusStr = "resigned";
+    else if (st == GameState::DrawFiftyMoves) statusStr = "draw_fifty_moves";
+    json += "\"status\":\"" + statusStr + "\",";
+    json += "\"isGameOver\":" + std::string(st != GameState::Ongoing ? "true" : "false") + ",";
+
+    // Legal moves in UCI format
+    auto moves = b.generateLegalMoves();
+    json += "\"legalMoves\":[";
+    for (size_t i = 0; i < moves.size(); ++i) {
+        std::string uci = moves[i].from.toAlgebraic() + moves[i].to.toAlgebraic();
+        if (moves[i].flag == MoveFlag::Promotion) {
+            char p = 'q';
+            if (moves[i].promotionType == PieceType::Rook) p = 'r';
+            else if (moves[i].promotionType == PieceType::Bishop) p = 'b';
+            else if (moves[i].promotionType == PieceType::Knight) p = 'n';
+            uci += p;
+        }
+        json += "\"" + uci + "\"";
+        if (i + 1 < moves.size()) json += ",";
+    }
+    json += "],";
+
+    // History SAN
+    json += "\"historySAN\":[";
+    for (size_t i = 0; i < sanHist.size(); ++i) {
+        json += "\"" + escapeJson(sanHist[i]) + "\"";
+        if (i + 1 < sanHist.size()) json += ",";
+    }
+    json += "],";
+
+    // History UCI
+    json += "\"historyUCI\":[";
+    for (size_t i = 0; i < uciHist.size(); ++i) {
+        json += "\"" + escapeJson(uciHist[i]) + "\"";
+        if (i + 1 < uciHist.size()) json += ",";
+    }
+    json += "],";
+
+    // PGN
+    json += "\"pgn\":\"" + escapeJson(pgn) + "\"";
+    json += "}";
+    return json;
+}
+
+std::string Game::processApiCommand(const std::string& jsonInput) {
+    std::string cmd = extractJsonString(jsonInput, "cmd");
+    if (cmd.empty()) {
+        std::string trimmed = trimAndClean(jsonInput);
+        if (trimmed == "new" || trimmed == "state" || trimmed == "moves" || trimmed == "undo" || trimmed == "eval" || trimmed == "pgn" || trimmed == "fen") {
+            cmd = trimmed;
+        }
+    }
+
+    if (cmd == "new" || cmd == "reset") {
+        reset();
+        return buildStateResponse(board, state, moveHistorySAN, moveHistoryUCI, exportPGN());
+    }
+
+    if (cmd == "load_fen") {
+        std::string fen = extractJsonString(jsonInput, "fen");
+        if (fen.empty()) return "{\"ok\":false,\"error\":\"Missing fen parameter\"}";
+        if (!board.loadFEN(fen)) {
+            return "{\"ok\":false,\"error\":\"Invalid FEN format\"}";
+        }
+        boardHistory.clear();
+        moveHistoryUCI.clear();
+        moveHistorySAN.clear();
+        Color next = board.getSideToMove();
+        if (board.isCheckmate(next)) state = GameState::Checkmate;
+        else if (board.isStalemate(next)) state = GameState::Stalemate;
+        else state = GameState::Ongoing;
+        return buildStateResponse(board, state, moveHistorySAN, moveHistoryUCI, exportPGN());
+    }
+
+    if (cmd == "state") {
+        return buildStateResponse(board, state, moveHistorySAN, moveHistoryUCI, exportPGN());
+    }
+
+    if (cmd == "moves") {
+        auto moves = board.generateLegalMoves();
+        std::string json = "{\"ok\":true,\"moves\":[";
+        for (size_t i = 0; i < moves.size(); ++i) {
+            std::string uci = moves[i].from.toAlgebraic() + moves[i].to.toAlgebraic();
+            if (moves[i].flag == MoveFlag::Promotion) {
+                char p = 'q';
+                if (moves[i].promotionType == PieceType::Rook) p = 'r';
+                else if (moves[i].promotionType == PieceType::Bishop) p = 'b';
+                else if (moves[i].promotionType == PieceType::Knight) p = 'n';
+                uci += p;
+            }
+            json += "\"" + uci + "\"";
+            if (i + 1 < moves.size()) json += ",";
+        }
+        json += "]}";
+        return json;
+    }
+
+    if (cmd == "move") {
+        std::string moveStr = extractJsonString(jsonInput, "move");
+        if (moveStr.empty()) return "{\"ok\":false,\"error\":\"Missing move parameter\"}";
+        if (!processMove(moveStr)) {
+            return "{\"ok\":false,\"error\":\"Illegal or invalid move: " + escapeJson(moveStr) + "\"}";
+        }
+        std::string resp = buildStateResponse(board, state, moveHistorySAN, moveHistoryUCI, exportPGN());
+        // Insert lastMove fields
+        std::string lastSAN = moveHistorySAN.empty() ? "" : moveHistorySAN.back();
+        std::string lastUCI = moveHistoryUCI.empty() ? "" : moveHistoryUCI.back();
+        std::string insert = ",\"lastMoveSAN\":\"" + escapeJson(lastSAN) + "\",\"lastMoveUCI\":\"" + escapeJson(lastUCI) + "\"";
+        resp.insert(resp.length() - 1, insert);
+        return resp;
+    }
+
+    if (cmd == "ai_move") {
+        if (isGameOver()) {
+            return "{\"ok\":false,\"error\":\"Game is already over\"}";
+        }
+        int depth = extractJsonInt(jsonInput, "depth", aiDepth);
+        if (depth < 1) depth = 1;
+        if (depth > 6) depth = 6;
+
+        Move bestMove = computeAIMove(depth);
+        if (!bestMove.from.isValid() || !bestMove.to.isValid()) {
+            return "{\"ok\":false,\"error\":\"No legal moves available\"}";
+        }
+
+        std::string uciStr = bestMove.from.toAlgebraic() + bestMove.to.toAlgebraic();
+        if (bestMove.flag == MoveFlag::Promotion) {
+            char p = 'q';
+            if (bestMove.promotionType == PieceType::Rook) p = 'r';
+            else if (bestMove.promotionType == PieceType::Bishop) p = 'b';
+            else if (bestMove.promotionType == PieceType::Knight) p = 'n';
+            uciStr += p;
+        }
+
+        if (!processMove(uciStr)) {
+            return "{\"ok\":false,\"error\":\"Failed to commit AI move\"}";
+        }
+
+        std::string resp = buildStateResponse(board, state, moveHistorySAN, moveHistoryUCI, exportPGN());
+        std::string lastSAN = moveHistorySAN.empty() ? "" : moveHistorySAN.back();
+        std::string insert = ",\"aiMove\":\"" + escapeJson(uciStr) + "\",\"aiMoveSAN\":\"" + escapeJson(lastSAN) + "\",\"nodesEvaluated\":" + std::to_string(ai.getNodesEvaluated());
+        resp.insert(resp.length() - 1, insert);
+        return resp;
+    }
+
+    if (cmd == "undo") {
+        if (!undo()) {
+            return "{\"ok\":false,\"error\":\"No moves to undo\"}";
+        }
+        return buildStateResponse(board, state, moveHistorySAN, moveHistoryUCI, exportPGN());
+    }
+
+    if (cmd == "eval") {
+        int score = Evaluator::evaluate(board);
+        return "{\"ok\":true,\"score\":" + std::to_string(score) + "}";
+    }
+
+    if (cmd == "fen") {
+        return "{\"ok\":true,\"fen\":\"" + escapeJson(board.toFEN()) + "\"}";
+    }
+
+    if (cmd == "pgn") {
+        return "{\"ok\":true,\"pgn\":\"" + escapeJson(exportPGN()) + "\"}";
+    }
+
+    return "{\"ok\":false,\"error\":\"Unknown command: " + escapeJson(cmd) + "\"}";
+}
+
+void Game::runApiMode() {
+    std::string line;
+    while (std::getline(std::cin, line)) {
+        std::string trimmed = trimAndClean(line);
+        if (trimmed.empty()) continue;
+        if (trimmed == "quit" || trimmed == "exit" || trimmed == "{\"cmd\":\"quit\"}") {
+            std::cout << "{\"ok\":true,\"message\":\"bye\"}\n" << std::flush;
+            break;
+        }
+        std::string resp = processApiCommand(line);
+        std::cout << resp << "\n" << std::flush;
     }
 }

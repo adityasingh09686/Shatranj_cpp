@@ -27,19 +27,35 @@ private:
     MinimaxAI ai;
     int aiDepth;
 
+    std::vector<Board> boardHistory;
+    std::vector<std::string> moveHistoryUCI;
+    std::vector<std::string> moveHistorySAN;
+
 public:
     Game();
 
     void start();
+    void runApiMode();
+    std::string processApiCommand(const std::string& jsonInput);
+
     bool processMove(const std::string& moveStr);
     void makeAIMove();
+    Move computeAIMove(int depth);
+
+    bool undo();
+    void reset();
 
     void setGameMode(GameMode m) { mode = m; }
-    void setAIDepth(int depth) { aiDepth = depth; }
+    void setAIDepth(int depth)   { aiDepth = depth; }
 
     const Board& getBoard() const { return board; }
-    GameState getState() const { return state; }
-    bool isGameOver() const { return state != GameState::Ongoing; }
+    GameState getState()    const { return state; }
+    bool isGameOver()       const { return state != GameState::Ongoing; }
+
+    std::string exportPGN() const;
+    std::string toSAN(const Move& m, const Board& before) const;
+    const std::vector<std::string>& getMoveHistoryUCI() const { return moveHistoryUCI; }
+    const std::vector<std::string>& getMoveHistorySAN() const { return moveHistorySAN; }
 
     static bool parseMove(const std::string& input, Position& from, Position& to, PieceType& promo);
 };

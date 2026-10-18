@@ -27,3 +27,8 @@ Makefile
 *.swp
 *.swo
 .DS_Store
+
+# Node & Frontend / Backend build artifacts
+node_modules/
+dist/
+.env

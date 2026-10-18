@@ -75,4 +75,8 @@ public:
 
     // True if any piece of the given side attacks the square at pos
     bool isSquareAttackedBy(Position pos, Color attacker) const;
+
+    // FEN export and import
+    std::string toFEN() const;
+    bool loadFEN(const std::string& fen);
 };

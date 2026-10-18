@@ -5,6 +5,8 @@
 #include "Rook.h"
 #include "Queen.h"
 #include "King.h"
+#include <sstream>
+#include <cctype>
 
 
 static std::unique_ptr<Piece> clonePiece(const Piece* p) {
@@ -72,6 +74,12 @@ Board& Board::operator=(const Board& other) {
 }
 
 void Board::initStandardPosition() {
+    for (int f = 0; f < 8; ++f) {
+        for (int r = 0; r < 8; ++r) {
+            squares[f][r] = nullptr;
+        }
+    }
+
     // --- White pieces ---
     setPieceAt(Position(0,0), std::make_unique<Rook>(Color::White));
     setPieceAt(Position(1,0), std::make_unique<Knight>(Color::White));
@@ -312,4 +320,147 @@ bool Board::canCastleKingside(Color c) const {
 
 bool Board::canCastleQueenside(Color c) const {
     return (c == Color::White) ? castleWhiteQueenside : castleBlackQueenside;
+}
+
+std::string Board::toFEN() const {
+    std::string fen;
+
+    // 1. Piece placement (rank 7 down to rank 0)
+    for (int r = 7; r >= 0; --r) {
+        int emptyCount = 0;
+        for (int f = 0; f < 8; ++f) {
+            const Piece* p = getPieceAt(Position(f, r));
+            if (!p) {
+                ++emptyCount;
+            } else {
+                if (emptyCount > 0) {
+                    fen += std::to_string(emptyCount);
+                    emptyCount = 0;
+                }
+                char c = ' ';
+                switch (p->getType()) {
+                    case PieceType::Pawn:   c = 'P'; break;
+                    case PieceType::Knight: c = 'N'; break;
+                    case PieceType::Bishop: c = 'B'; break;
+                    case PieceType::Rook:   c = 'R'; break;
+                    case PieceType::Queen:  c = 'Q'; break;
+                    case PieceType::King:   c = 'K'; break;
+                    default: break;
+                }
+                if (p->getColor() == Color::Black) {
+                    c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+                }
+                fen += c;
+            }
+        }
+        if (emptyCount > 0) {
+            fen += std::to_string(emptyCount);
+        }
+        if (r > 0) fen += '/';
+    }
+
+    // 2. Active color
+    fen += (sideToMove == Color::White) ? " w " : " b ";
+
+    // 3. Castling availability
+    std::string castling;
+    if (castleWhiteKingside)  castling += 'K';
+    if (castleWhiteQueenside) castling += 'Q';
+    if (castleBlackKingside)  castling += 'k';
+    if (castleBlackQueenside) castling += 'q';
+    if (castling.empty()) castling = "-";
+    fen += castling;
+
+    // 4. En passant target
+    fen += ' ';
+    if (enPassantTarget.isValid()) {
+        fen += enPassantTarget.toAlgebraic();
+    } else {
+        fen += '-';
+    }
+
+    // 5. Halfmove clock & 6. Fullmove number
+    fen += ' ';
+    fen += std::to_string(halfMoveClock);
+    fen += ' ';
+    fen += std::to_string(fullMoveNumber);
+
+    return fen;
+}
+
+bool Board::loadFEN(const std::string& fen) {
+    std::istringstream ss(fen);
+    std::string pieces, side, castling, ep;
+    int halfmove = 0, fullmove = 1;
+
+    if (!(ss >> pieces >> side >> castling >> ep)) {
+        return false;
+    }
+    ss >> halfmove >> fullmove;
+
+    // Clear board
+    for (int f = 0; f < 8; ++f) {
+        for (int r = 0; r < 8; ++r) {
+            squares[f][r] = nullptr;
+        }
+    }
+
+    // Parse piece positions
+    int rank = 7;
+    int file = 0;
+    for (char c : pieces) {
+        if (c == '/') {
+            --rank;
+            file = 0;
+            if (rank < 0) return false;
+        } else if (std::isdigit(static_cast<unsigned char>(c))) {
+            file += (c - '0');
+        } else {
+            if (file >= 8 || rank < 0) return false;
+            Color col = std::isupper(static_cast<unsigned char>(c)) ? Color::White : Color::Black;
+            char lower = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+            std::unique_ptr<Piece> piece = nullptr;
+
+            switch (lower) {
+                case 'p': piece = std::make_unique<Pawn>(col); break;
+                case 'n': piece = std::make_unique<Knight>(col); break;
+                case 'b': piece = std::make_unique<Bishop>(col); break;
+                case 'r': piece = std::make_unique<Rook>(col); break;
+                case 'q': piece = std::make_unique<Queen>(col); break;
+                case 'k': piece = std::make_unique<King>(col); break;
+                default: return false;
+            }
+            setPieceAt(Position(file, rank), std::move(piece));
+            ++file;
+        }
+    }
+
+    // Active color
+    if (side == "w" || side == "W") sideToMove = Color::White;
+    else if (side == "b" || side == "B") sideToMove = Color::Black;
+    else return false;
+
+    // Castling rights
+    castleWhiteKingside  = (castling.find('K') != std::string::npos);
+    castleWhiteQueenside = (castling.find('Q') != std::string::npos);
+    castleBlackKingside  = (castling.find('k') != std::string::npos);
+    castleBlackQueenside = (castling.find('q') != std::string::npos);
+
+    // En passant
+    if (ep != "-" && ep.length() == 2) {
+        int epF = ep[0] - 'a';
+        int epR = ep[1] - '1';
+        if (epF >= 0 && epF < 8 && epR >= 0 && epR < 8) {
+            enPassantTarget = Position(epF, epR);
+        } else {
+            enPassantTarget = Position();
+        }
+    } else {
+        enPassantTarget = Position();
+    }
+
+    halfMoveClock  = halfmove;
+    fullMoveNumber = (fullmove > 0) ? fullmove : 1;
+
+    return true;
 }
