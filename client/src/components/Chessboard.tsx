@@ -197,8 +197,8 @@ export const Chessboard: React.FC<ChessboardProps> = ({
   };
 
   return (
-    <div className="chessboard-container relative select-none">
-      <div className="chessboard-wrapper grid grid-cols-8 shadow-2xl rounded-xl overflow-hidden border border-slate-700/60 bg-slate-900/90 aspect-square w-full max-w-[560px]">
+    <div className="chessboard-container">
+      <div className="chessboard-grid">
         {rankIndices.map((rankIdx) =>
           fileIndices.map((fileIdx) => {
             const squareName = `${String.fromCharCode(97 + fileIdx)}${rankIdx + 1}`;
@@ -217,31 +217,19 @@ export const Chessboard: React.FC<ChessboardProps> = ({
                 onClick={() => handleSquareClick(squareName)}
                 onDragOver={handleDragOver}
                 onDrop={(e) => handleDrop(e, squareName)}
-                className={`square relative flex items-center justify-center transition-colors duration-150 cursor-pointer ${
-                  isDark ? 'bg-[#769656]' : 'bg-[#eeeed2]'
-                } ${isSelected ? '!bg-amber-400/80 shadow-inner' : ''} ${
-                  isLastMoveFrom || isLastMoveTo ? '!bg-emerald-400/50' : ''
-                } ${isKingInCheck ? '!bg-red-500/80 animate-pulse' : ''}`}
+                className={`square ${isDark ? 'dark' : 'light'} ${
+                  isSelected ? 'selected' : ''
+                } ${isLastMoveFrom || isLastMoveTo ? 'last-move' : ''} ${
+                  isKingInCheck ? 'in-check' : ''
+                }`}
                 data-square={squareName}
               >
                 {/* Coordinate labels */}
                 {fileIdx === (orientation === 'white' ? 0 : 7) && (
-                  <span
-                    className={`coordinate-rank absolute top-1 left-1.5 text-[10px] font-bold pointer-events-none select-none ${
-                      isDark ? 'text-[#eeeed2]/80' : 'text-[#769656]/90'
-                    }`}
-                  >
-                    {rankIdx + 1}
-                  </span>
+                  <span className="coord-rank">{rankIdx + 1}</span>
                 )}
                 {rankIdx === (orientation === 'white' ? 0 : 7) && (
-                  <span
-                    className={`coordinate-file absolute bottom-0.5 right-1.5 text-[10px] font-bold pointer-events-none select-none ${
-                      isDark ? 'text-[#eeeed2]/80' : 'text-[#769656]/90'
-                    }`}
-                  >
-                    {String.fromCharCode(97 + fileIdx)}
-                  </span>
+                  <span className="coord-file">{String.fromCharCode(97 + fileIdx)}</span>
                 )}
 
                 {/* Piece representation with drag-and-drop */}
@@ -249,7 +237,7 @@ export const Chessboard: React.FC<ChessboardProps> = ({
                   <div
                     draggable={!disabled}
                     onDragStart={(e) => handleDragStart(e, squareName)}
-                    className="piece-wrapper w-[82%] h-[82%] flex items-center justify-center transition-transform hover:scale-105 active:scale-95 drop-shadow-md z-10"
+                    className="piece-box"
                   >
                     <ChessPiece type={piece as any} />
                   </div>
@@ -257,10 +245,10 @@ export const Chessboard: React.FC<ChessboardProps> = ({
 
                 {/* Legal move destination indicator */}
                 {isLegalDest && !piece && (
-                  <div className="legal-dot absolute w-3.5 h-3.5 rounded-full bg-slate-900/35 pointer-events-none" />
+                  <div className="legal-dot-marker" />
                 )}
                 {isLegalDest && piece && (
-                  <div className="legal-capture absolute inset-0 rounded-none border-4 border-slate-900/30 pointer-events-none" />
+                  <div className="legal-capture-marker" />
                 )}
               </div>
             );
@@ -270,23 +258,21 @@ export const Chessboard: React.FC<ChessboardProps> = ({
 
       {/* Pawn Promotion Dialog Modal */}
       {pendingPromotion && (
-        <div className="promotion-overlay absolute inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center rounded-xl p-4 animate-fade-in">
-          <div className="promotion-dialog bg-slate-800 border border-slate-700/80 rounded-2xl p-5 shadow-2xl max-w-xs w-full text-center">
-            <h3 className="text-lg font-bold text-slate-100 mb-1">Pawn Promotion</h3>
-            <p className="text-xs text-slate-400 mb-4">Choose promotion piece</p>
+        <div className="promotion-backdrop">
+          <div className="promotion-card">
+            <h3>Pawn Promotion</h3>
+            <p>Choose promotion piece</p>
 
-            <div className="grid grid-cols-4 gap-2 mb-4">
+            <div className="promotion-grid">
               {(['q', 'r', 'b', 'n'] as const).map((pType) => {
                 const promoChar = sideToMove === 'white' ? pType.toUpperCase() : pType;
                 return (
                   <button
                     key={pType}
                     onClick={() => completePromotion(pType)}
-                    className="promo-btn bg-slate-700 hover:bg-emerald-600/80 border border-slate-600 rounded-xl p-2.5 transition flex items-center justify-center aspect-square shadow"
+                    className="promo-piece-btn"
                   >
-                    <div className="w-10 h-10">
-                      <ChessPiece type={promoChar as any} />
-                    </div>
+                    <ChessPiece type={promoChar as any} />
                   </button>
                 );
               })}
@@ -294,7 +280,7 @@ export const Chessboard: React.FC<ChessboardProps> = ({
 
             <button
               onClick={() => setPendingPromotion(null)}
-              className="text-xs text-slate-400 hover:text-rose-400 transition"
+              className="promo-cancel-btn"
             >
               Cancel
             </button>

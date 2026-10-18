@@ -41,25 +41,25 @@ export const MoveHistory: React.FC<MoveHistoryProps> = ({
   }, [historySAN.length]);
 
   return (
-    <div className="move-history-card bg-slate-800/90 border border-slate-700/80 rounded-2xl p-4 shadow-xl flex flex-col h-full max-h-[460px]">
-      <div className="flex items-center justify-between pb-3 mb-2 border-b border-slate-700/60">
-        <h3 className="font-bold text-sm tracking-wide text-slate-200">Move History</h3>
-        <span className="text-xs font-mono text-slate-400">
+    <div className="move-history-card">
+      <div className="history-header">
+        <h3>Move History</h3>
+        <span>
           {historySAN.length} {historySAN.length === 1 ? 'ply' : 'plies'}
         </span>
       </div>
 
       {/* Historical Review Warning Banner */}
       {isReviewing && (
-        <div className="mb-3 px-3 py-2 bg-amber-500/15 border border-amber-500/40 rounded-xl flex items-center justify-between animate-fade-in">
-          <span className="text-xs font-medium text-amber-300">
+        <div className="review-banner">
+          <span>
             Reviewing Move {currentPly}
           </span>
           <button
             onClick={onResumeLive}
-            className="flex items-center gap-1 text-xs font-semibold px-2 py-1 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-lg transition"
+            className="btn-live-resume"
           >
-            <Play className="w-3 h-3 fill-current" /> Live Game
+            <Play size={12} fill="currentColor" /> Live Game
           </button>
         </div>
       )}
@@ -67,10 +67,10 @@ export const MoveHistory: React.FC<MoveHistoryProps> = ({
       {/* Move List Table */}
       <div
         ref={scrollRef}
-        className="move-list flex-1 overflow-y-auto space-y-0.5 pr-1 font-mono text-xs scrollbar-thin scrollbar-thumb-slate-700"
+        className="move-list-scroll"
       >
         {movePairs.length === 0 ? (
-          <div className="text-slate-500 text-center py-8 italic text-xs">
+          <div className="empty-moves">
             No moves yet. Start playing!
           </div>
         ) : (
@@ -81,19 +81,15 @@ export const MoveHistory: React.FC<MoveHistoryProps> = ({
             return (
               <div
                 key={pair.moveNum}
-                className="grid grid-cols-[38px_1fr_1fr] items-center rounded-lg hover:bg-slate-700/30 transition-colors"
+                className="move-row"
               >
-                <span className="text-slate-500 pl-2 font-medium">
+                <span className="move-num">
                   {pair.moveNum}.
                 </span>
 
                 <button
                   onClick={() => onSelectPly(pair.whitePly)}
-                  className={`text-left px-2 py-1.5 rounded font-semibold transition ${
-                    isWhiteActive
-                      ? 'bg-emerald-500/25 text-emerald-300 border border-emerald-500/40'
-                      : 'text-slate-200 hover:text-white'
-                  }`}
+                  className={`move-btn ${isWhiteActive ? 'active' : ''}`}
                 >
                   {pair.white}
                 </button>
@@ -101,11 +97,7 @@ export const MoveHistory: React.FC<MoveHistoryProps> = ({
                 {pair.black ? (
                   <button
                     onClick={() => onSelectPly(pair.blackPly!)}
-                    className={`text-left px-2 py-1.5 rounded font-semibold transition ${
-                      isBlackActive
-                        ? 'bg-emerald-500/25 text-emerald-300 border border-emerald-500/40'
-                        : 'text-slate-200 hover:text-white'
-                    }`}
+                    className={`move-btn ${isBlackActive ? 'active' : ''}`}
                   >
                     {pair.black}
                   </button>
@@ -119,38 +111,38 @@ export const MoveHistory: React.FC<MoveHistoryProps> = ({
       </div>
 
       {/* Navigation Buttons */}
-      <div className="flex items-center justify-center gap-1 pt-3 mt-2 border-t border-slate-700/60">
+      <div className="history-stepper">
         <button
           onClick={() => onSelectPly(0)}
           disabled={currentPly === 0}
           title="Beginning"
-          className="p-1.5 rounded-lg bg-slate-700/50 hover:bg-slate-700 disabled:opacity-30 disabled:hover:bg-slate-700/50 text-slate-300 transition"
+          className="btn-stepper"
         >
-          <ChevronFirst className="w-4 h-4" />
+          <ChevronFirst size={16} />
         </button>
         <button
           onClick={() => onSelectPly(Math.max(0, currentPly - 1))}
           disabled={currentPly === 0}
           title="Previous move"
-          className="p-1.5 rounded-lg bg-slate-700/50 hover:bg-slate-700 disabled:opacity-30 disabled:hover:bg-slate-700/50 text-slate-300 transition"
+          className="btn-stepper"
         >
-          <ChevronLeft className="w-4 h-4" />
+          <ChevronLeft size={16} />
         </button>
         <button
           onClick={() => onSelectPly(Math.min(historySAN.length, currentPly + 1))}
           disabled={currentPly === historySAN.length}
           title="Next move"
-          className="p-1.5 rounded-lg bg-slate-700/50 hover:bg-slate-700 disabled:opacity-30 disabled:hover:bg-slate-700/50 text-slate-300 transition"
+          className="btn-stepper"
         >
-          <ChevronRight className="w-4 h-4" />
+          <ChevronRight size={16} />
         </button>
         <button
           onClick={() => onSelectPly(historySAN.length)}
           disabled={currentPly === historySAN.length}
           title="Latest move"
-          className="p-1.5 rounded-lg bg-slate-700/50 hover:bg-slate-700 disabled:opacity-30 disabled:hover:bg-slate-700/50 text-slate-300 transition"
+          className="btn-stepper"
         >
-          <ChevronLast className="w-4 h-4" />
+          <ChevronLast size={16} />
         </button>
       </div>
     </div>

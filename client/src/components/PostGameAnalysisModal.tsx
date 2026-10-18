@@ -74,74 +74,118 @@ export const PostGameAnalysisModal: React.FC<PostGameAnalysisModalProps> = ({
   }, [report]);
 
   return (
-    <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-6 animate-fade-in overflow-y-auto">
-      <div className="bg-slate-900 border border-slate-700/80 rounded-3xl max-w-4xl w-full shadow-2xl flex flex-col max-h-[92vh] overflow-hidden">
+    <div className="modal-overlay">
+      <div className="analysis-modal-window">
         {/* Header */}
-        <div className="flex items-center justify-between p-5 border-b border-slate-800">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
-              <Sparkles className="w-5 h-5" />
+        <div className="analysis-header">
+          <div className="analysis-title-box">
+            <div className="analysis-spark-icon">
+              <Sparkles size={20} />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-slate-100 flex items-center gap-2">
+              <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#ffffff' }}>
                 Stockfish Game Analysis
               </h2>
-              <p className="text-xs text-slate-400">
+              <p style={{ fontSize: '0.75rem', color: '#9ca3af' }}>
                 Move quality classifications, centipawn loss, and evaluation graph
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5">
+          <div className="analysis-header-btns">
             {onRestartAnalysis && report && (
               <button
                 onClick={onRestartAnalysis}
                 title="Re-run analysis"
-                className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition"
+                className="btn-icon-close"
               >
-                <RotateCcw className="w-4 h-4" />
+                <RotateCcw size={16} />
               </button>
             )}
             <button
               onClick={onClose}
-              className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition"
+              className="btn-icon-close"
             >
-              <X className="w-5 h-5" />
+              <X size={16} />
             </button>
           </div>
         </div>
 
         {/* Content Body */}
-        <div className="p-6 overflow-y-auto space-y-6">
+        <div className="analysis-body">
           {/* Loading / Progress State */}
           {isLoading && (
-            <div className="bg-slate-800/80 border border-slate-700 rounded-2xl p-6 text-center space-y-4">
-              <div className="flex items-center justify-center gap-2 text-indigo-400 font-semibold text-sm">
-                <RefreshCw className="w-5 h-5 animate-spin" />
+            <div style={{
+              background: 'rgba(31, 41, 55, 0.6)',
+              border: '1px solid rgba(75, 85, 99, 0.4)',
+              borderRadius: '1rem',
+              padding: '1.5rem',
+              textAlign: 'center',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '1rem'
+            }}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.5rem',
+                color: '#818cf8',
+                fontWeight: 700,
+                fontSize: '0.85rem'
+              }}>
+                <RefreshCw size={18} style={{ animation: 'spin 1s linear infinite' }} />
                 Analyzing positions with Stockfish...
               </div>
 
               {progress && (
-                <div className="space-y-1.5 max-w-md mx-auto">
-                  <div className="flex justify-between text-xs font-mono text-slate-400">
+                <div style={{ maxWidth: '400px', margin: '0 auto', width: '100%' }}>
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    fontSize: '0.75rem',
+                    fontFamily: 'monospace',
+                    color: '#9ca3af',
+                    marginBottom: '0.4rem'
+                  }}>
                     <span>Move {progress.current} of {progress.total}</span>
                     <span>{Math.round((progress.current / progress.total) * 100)}%</span>
                   </div>
-                  <div className="w-full bg-slate-700 rounded-full h-2 overflow-hidden">
+                  <div style={{
+                    width: '100%',
+                    background: '#374151',
+                    borderRadius: '9999px',
+                    height: '8px',
+                    overflow: 'hidden'
+                  }}>
                     <div
-                      className="bg-indigo-500 h-full transition-all duration-200"
-                      style={{ width: `${(progress.current / progress.total) * 100}%` }}
+                      style={{
+                        background: '#6366f1',
+                        height: '100%',
+                        width: `${(progress.current / progress.total) * 100}%`,
+                        transition: 'width 0.2s ease'
+                      }}
                     />
                   </div>
                 </div>
               )}
 
-              <button
-                onClick={onCancel}
-                className="px-4 py-1.5 rounded-xl text-xs bg-slate-700 hover:bg-rose-900/60 text-slate-300 hover:text-rose-200 transition"
-              >
-                Cancel Analysis
-              </button>
+              <div>
+                <button
+                  onClick={onCancel}
+                  style={{
+                    padding: '0.4rem 1rem',
+                    borderRadius: '0.6rem',
+                    fontSize: '0.75rem',
+                    background: '#374151',
+                    border: '1px solid rgba(75, 85, 99, 0.5)',
+                    color: '#f87171',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Cancel Analysis
+                </button>
+              </div>
             </div>
           )}
 
@@ -149,56 +193,56 @@ export const PostGameAnalysisModal: React.FC<PostGameAnalysisModalProps> = ({
           {report && !isLoading && (
             <>
               {/* Accuracy & Score Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="accuracy-cards-grid">
                 {/* White Accuracy Card */}
-                <div className="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-4 flex items-center justify-between shadow">
-                  <div className="flex items-center gap-3">
-                    <span className="text-3xl">♔</span>
+                <div className="accuracy-card">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+                    <span style={{ fontSize: '2rem' }}>♔</span>
                     <div>
-                      <div className="text-xs uppercase tracking-wider text-slate-400 font-semibold">White Accuracy</div>
-                      <div className="text-2xl font-black text-slate-100 font-mono">
+                      <div className="accuracy-title">White Accuracy</div>
+                      <div className="accuracy-value">
                         {report.whiteAccuracy}%
                       </div>
                     </div>
                   </div>
-                  <div className="text-right text-[11px] text-slate-400">
+                  <div className="accuracy-breakdown">
                     <div>{report.classificationSummary.white.Best} Best Moves</div>
-                    <div className="text-rose-400">{report.classificationSummary.white.Blunder} Blunders</div>
+                    <div className="blunder-count">{report.classificationSummary.white.Blunder} Blunders</div>
                   </div>
                 </div>
 
                 {/* Black Accuracy Card */}
-                <div className="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-4 flex items-center justify-between shadow">
-                  <div className="flex items-center gap-3">
-                    <span className="text-3xl">♚</span>
+                <div className="accuracy-card">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+                    <span style={{ fontSize: '2rem' }}>♚</span>
                     <div>
-                      <div className="text-xs uppercase tracking-wider text-slate-400 font-semibold">Black Accuracy</div>
-                      <div className="text-2xl font-black text-slate-100 font-mono">
+                      <div className="accuracy-title">Black Accuracy</div>
+                      <div className="accuracy-value">
                         {report.blackAccuracy}%
                       </div>
                     </div>
                   </div>
-                  <div className="text-right text-[11px] text-slate-400">
+                  <div className="accuracy-breakdown">
                     <div>{report.classificationSummary.black.Best} Best Moves</div>
-                    <div className="text-rose-400">{report.classificationSummary.black.Blunder} Blunders</div>
+                    <div className="blunder-count">{report.classificationSummary.black.Blunder} Blunders</div>
                   </div>
                 </div>
               </div>
 
               {/* Interactive Evaluation Graph */}
-              <div className="bg-slate-800/50 border border-slate-700/60 rounded-2xl p-4 shadow">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="text-xs font-semibold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-                    <TrendingUp className="w-3.5 h-3.5 text-indigo-400" />
+              <div className="chart-card">
+                <div className="chart-header">
+                  <h4>
+                    <TrendingUp size={14} color="#6366f1" />
                     Evaluation Trajectory
-                  </div>
-                  <span className="text-[11px] text-slate-400">Click any point to review position</span>
+                  </h4>
+                  <span>Click any point to review position</span>
                 </div>
 
-                <div className="relative overflow-x-auto">
+                <div style={{ position: 'relative', overflowX: 'auto' }}>
                   <svg
                     viewBox={`0 0 ${chartWidth} ${chartHeight}`}
-                    className="w-full h-44 rounded-xl bg-slate-950/60 select-none"
+                    className="svg-chart"
                   >
                     {/* Center zero line (Equal evaluation) */}
                     <line
@@ -244,7 +288,7 @@ export const PostGameAnalysisModal: React.FC<PostGameAnalysisModalProps> = ({
                           fill={dotColor}
                           stroke={isSelected ? '#ffffff' : '#0f172a'}
                           strokeWidth="1.5"
-                          className="cursor-pointer transition-all hover:scale-125"
+                          style={{ cursor: 'pointer', transition: 'all 0.15s ease' }}
                           onClick={() => onSelectPly(p.move.ply)}
                           onMouseEnter={() => setHoveredPly(p.move.ply)}
                           onMouseLeave={() => setHoveredPly(null)}
@@ -256,12 +300,12 @@ export const PostGameAnalysisModal: React.FC<PostGameAnalysisModalProps> = ({
               </div>
 
               {/* Move Breakdown List */}
-              <div className="space-y-2">
-                <div className="text-xs font-semibold text-slate-300 uppercase tracking-wider">
+              <div className="analysis-moves-card">
+                <div className="moves-title">
                   Detailed Move-by-Move Analysis ({report.moves.length} moves)
                 </div>
 
-                <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
+                <div className="analysis-move-rows">
                   {report.moves.map((m) => {
                     const badge = classificationColors[m.classification];
                     const isSelected = selectedPly === m.ply;
@@ -270,46 +314,47 @@ export const PostGameAnalysisModal: React.FC<PostGameAnalysisModalProps> = ({
                       <div
                         key={m.ply}
                         onClick={() => onSelectPly(m.ply)}
-                        className={`flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-xl border cursor-pointer transition ${
-                          isSelected
-                            ? 'bg-slate-800 border-indigo-500 shadow-md'
-                            : 'bg-slate-800/40 border-slate-700/60 hover:bg-slate-800/70'
-                        }`}
+                        className={`analysis-move-item ${isSelected ? 'selected' : ''}`}
                       >
-                        <div className="flex items-center gap-3 mb-2 sm:mb-0">
-                          <span className="font-mono text-xs font-semibold text-slate-400 w-10">
+                        <div className="move-info-left">
+                          <span className="move-idx">
                             {m.moveNumber}.{m.side === 'black' ? '..' : ''}
                           </span>
 
-                          <span className="font-mono text-sm font-bold text-slate-100">
+                          <span className="move-san">
                             {m.san}
                           </span>
 
                           <span
-                            className={`px-2 py-0.5 rounded-full text-[11px] font-semibold border ${badge.bg} ${badge.text} border-current/30`}
+                            className="classification-pill"
+                            style={{
+                              color: badge?.dot || '#6366f1',
+                              borderColor: badge?.dot ? `${badge.dot}60` : '#6366f1',
+                              backgroundColor: badge?.dot ? `${badge.dot}18` : 'transparent'
+                            }}
                           >
                             {m.classification}
                           </span>
 
                           {m.scoreLoss > 20 && (
-                            <span className="text-[11px] font-mono text-rose-400">
+                            <span className="loss-pill">
                               -{m.scoreLoss}cp
                             </span>
                           )}
                         </div>
 
-                        <div className="flex items-center gap-4 text-xs font-mono text-slate-400">
+                        <div className="move-info-right">
                           <div>
-                            Eval: <span className="text-slate-200 font-semibold">{m.evalAfter.formatted}</span>
+                            Eval: <span className="eval-stat">{m.evalAfter.formatted}</span>
                           </div>
 
                           {m.bestEngineMove && m.classification !== 'Best' && (
-                            <div className="flex items-center gap-1 text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-lg border border-emerald-500/20">
-                              <span>Best: {m.bestEngineMove}</span>
+                            <div className="best-rec-pill">
+                              Best: {m.bestEngineMove}
                             </div>
                           )}
 
-                          <ChevronRight className="w-4 h-4 text-slate-500 hidden sm:block" />
+                          <ChevronRight size={14} color="#6b7280" />
                         </div>
                       </div>
                     );
@@ -321,13 +366,13 @@ export const PostGameAnalysisModal: React.FC<PostGameAnalysisModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="p-4 bg-slate-900 border-t border-slate-800 flex items-center justify-between">
-          <span className="text-xs text-slate-500">
+        <div className="analysis-footer">
+          <span>
             Powered by Stockfish UCI Engine & C++ Rule Verifier
           </span>
           <button
             onClick={onClose}
-            className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition"
+            className="btn-close-report"
           >
             Close Report
           </button>

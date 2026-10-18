@@ -373,63 +373,64 @@ export const App: React.FC = () => {
   }, [gameState.lastMoveUCI]);
 
   return (
-    <div className="min-h-screen flex flex-col justify-between">
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
       {/* Top Navigation Bar */}
-      <header className="border-b border-slate-800 bg-slate-900/80 backdrop-blur-md sticky top-0 z-40 px-4 py-3">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <span className="text-2xl">♔</span>
+      <header className="app-header">
+        <div className="header-inner">
+          <div className="brand">
+            <span className="brand-icon">♔</span>
             <div>
-              <h1 className="text-lg font-black tracking-tight text-slate-100 flex items-center gap-2">
-                SHATRANJ <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">C++ ENGINE</span>
+              <h1 className="brand-title">
+                SHATRANJ <span className="badge-engine">C++ ENGINE</span>
               </h1>
-              <p className="text-[11px] text-slate-400 font-mono">
+              <p className="brand-subtitle">
                 Minimax AI + Stockfish Analysis Dashboard
               </p>
             </div>
           </div>
 
           {/* Mode Badge & Opponent Indicator */}
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-800 border border-slate-700/80 text-xs">
-              {gameMode === 'vs_custom_ai_white' || gameMode === 'vs_custom_ai_black' ? (
-                <>
-                  <Cpu className="w-3.5 h-3.5 text-emerald-400" />
-                  <span className="font-semibold text-slate-200">Custom C++ AI (Depth {aiDepth})</span>
-                </>
-              ) : gameMode === 'vs_stockfish' ? (
-                <>
-                  <Cpu className="w-3.5 h-3.5 text-amber-400" />
-                  <span className="font-semibold text-amber-300">Stockfish UCI Engine</span>
-                </>
-              ) : (
-                <>
-                  <User className="w-3.5 h-3.5 text-indigo-400" />
-                  <span className="font-semibold text-slate-200">Local 2-Player</span>
-                </>
-              )}
-            </div>
+          <div className="header-mode-badge">
+            {gameMode === 'vs_custom_ai_white' || gameMode === 'vs_custom_ai_black' ? (
+              <>
+                <Cpu size={15} color="#10b981" />
+                <span>Custom C++ AI (Depth {aiDepth})</span>
+              </>
+            ) : gameMode === 'vs_stockfish' ? (
+              <>
+                <Cpu size={15} color="#f59e0b" />
+                <span style={{ color: '#fde68a' }}>Stockfish UCI Engine</span>
+              </>
+            ) : (
+              <>
+                <User size={15} color="#6366f1" />
+                <span>Local 2-Player</span>
+              </>
+            )}
           </div>
         </div>
       </header>
 
       {/* Error Toast Notification */}
       {errorMessage && (
-        <div className="max-w-md mx-auto my-3 px-4 py-2.5 bg-rose-500/20 border border-rose-500/50 rounded-2xl flex items-center justify-between text-xs text-rose-200 shadow-xl animate-fade-in">
-          <div className="flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+        <div className="error-toast">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <AlertCircle size={16} color="#f87171" />
             <span>{errorMessage}</span>
           </div>
-          <button onClick={() => setErrorMessage(null)} className="text-rose-400 hover:text-white font-bold ml-2">
+          <button
+            onClick={() => setErrorMessage(null)}
+            style={{ background: 'none', border: 'none', color: '#f87171', fontWeight: 800, cursor: 'pointer' }}
+          >
             ✕
           </button>
         </div>
       )}
 
       {/* Main Workspace Dashboard */}
-      <main className="max-w-7xl mx-auto w-full p-4 sm:p-6 grid grid-cols-1 lg:grid-cols-[auto_minmax(0,1fr)_340px] gap-6 items-start">
+      <main className="main-layout">
         {/* Left: Real-time Stockfish Evaluation Bar */}
-        <div className="hidden lg:flex justify-center">
+        <div className="eval-column">
           <EvaluationBar
             analysis={liveAnalysis}
             isThinking={isStockfishThinking}
@@ -438,16 +439,16 @@ export const App: React.FC = () => {
         </div>
 
         {/* Center: Interactive Chessboard */}
-        <div className="flex flex-col items-center gap-4">
+        <div className="board-column">
           {/* Top Player Status */}
-          <div className="w-full max-w-[560px] flex items-center justify-between px-3 py-2 bg-slate-800/60 border border-slate-700/60 rounded-xl text-xs font-semibold">
-            <div className="flex items-center gap-2 text-slate-300">
-              <span className="text-base">{orientation === 'white' ? '♚' : '♔'}</span>
+          <div className="player-card">
+            <div className="player-info">
+              <span className="player-avatar">{orientation === 'white' ? '♚' : '♔'}</span>
               <span>{orientation === 'white' ? (gameMode === 'two_player' ? 'Black' : 'Computer 🤖') : 'White'}</span>
             </div>
             {isAiThinking && (
-              <span className="text-[11px] font-mono text-emerald-400 flex items-center gap-1.5 animate-pulse">
-                <Cpu className="w-3.5 h-3.5" /> AI Thinking...
+              <span className="ai-status">
+                <Cpu size={14} /> AI Thinking...
               </span>
             )}
           </div>
@@ -465,14 +466,14 @@ export const App: React.FC = () => {
           />
 
           {/* Bottom Player Status */}
-          <div className="w-full max-w-[560px] flex items-center justify-between px-3 py-2 bg-slate-800/60 border border-slate-700/60 rounded-xl text-xs font-semibold">
-            <div className="flex items-center gap-2 text-slate-300">
-              <span className="text-base">{orientation === 'white' ? '♔' : '♚'}</span>
+          <div className="player-card">
+            <div className="player-info">
+              <span className="player-avatar">{orientation === 'white' ? '♔' : '♚'}</span>
               <span>{orientation === 'white' ? 'You (White)' : 'You (Black)'}</span>
             </div>
             {gameState.isGameOver && (
-              <span className="text-xs font-bold text-amber-400 flex items-center gap-1">
-                <Trophy className="w-3.5 h-3.5" /> {
+              <span className="game-over-status">
+                <Trophy size={14} /> {
                   gameState.status === 'checkmate' ? 'Checkmate!' :
                   gameState.status === 'stalemate' ? 'Stalemate Draw' :
                   gameState.status === 'draw_fifty_moves' ? '50-Move Draw' : 'Game Over'
@@ -483,7 +484,7 @@ export const App: React.FC = () => {
         </div>
 
         {/* Right Sidebar: Move History & Controls */}
-        <div className="flex flex-col gap-4">
+        <div className="sidebar-column">
           <Controls
             gameMode={gameMode}
             aiDepth={aiDepth}
@@ -511,7 +512,7 @@ export const App: React.FC = () => {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-slate-800 py-3 text-center text-xs text-slate-500">
+      <footer className="app-footer">
         Shatranj C++ Game Engine • Native Minimax AI • Stockfish UCI 10/17 Real-Time Analysis
       </footer>
 
