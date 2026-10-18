@@ -3,7 +3,11 @@
 #include <algorithm>
 #include <cctype>
 
-Game::Game() : state(GameState::Ongoing) {
+Game::Game() 
+    : state(GameState::Ongoing), 
+      mode(GameMode::TwoPlayer), 
+      aiDepth(3) 
+{
     board.initStandardPosition();
 }
 
@@ -253,25 +257,99 @@ bool Game::processMove(const std::string& rawInput) {
     return true;
 }
 
+void Game::makeAIMove() {
+    if (isGameOver()) return;
+
+    std::cout << "\n🤖 Computer is thinking (depth " << aiDepth << ")...\n";
+    Move bestMove = ai.findBestMove(board, aiDepth);
+
+    if (!bestMove.from.isValid() || !bestMove.to.isValid()) {
+        std::cout << "No moves found!\n";
+        return;
+    }
+
+    const Piece* p = board.getPieceAt(bestMove.from);
+    std::string symbol = p ? ConsoleRenderer::getPieceSymbol(p) : "";
+
+    std::cout << "🤖 Computer played: " 
+              << bestMove.from.toAlgebraic() << bestMove.to.toAlgebraic();
+    if (!symbol.empty()) std::cout << " (" << symbol << ")";
+    std::cout << " [Searched " << ai.getNodesEvaluated() << " positions]\n\n";
+
+    board.makeMove(bestMove);
+
+    // Evaluate game status
+    Color nextSide = board.getSideToMove();
+    if (board.isCheckmate(nextSide)) {
+        state = GameState::Checkmate;
+    } else if (board.isStalemate(nextSide)) {
+        state = GameState::Stalemate;
+    } else if (board.getHalfMoveClock() >= 100) {
+        state = GameState::DrawFiftyMoves;
+    }
+}
+
 void Game::start() {
     board.initStandardPosition();
     state = GameState::Ongoing;
 
     std::cout << "========================================\n";
-    std::cout << "        WELCOME TO CHESS (CONSOLE)      \n";
+    std::cout << "        WELCOME TO CHESS (SHATRANJ)     \n";
     std::cout << "========================================\n";
-    std::cout << "How to enter moves:\n";
+    std::cout << "Select Game Mode:\n";
+    std::cout << "  1. Human vs Human (Two Player)\n";
+    std::cout << "  2. Play as White vs Computer 🤖\n";
+    std::cout << "  3. Play as Black vs Computer 🤖\n";
+    std::cout << "  4. Computer vs Computer (Watch) 🤖\n";
+    std::cout << "Enter mode [1-4, default 1]: ";
+
+    std::string modeLine;
+    if (std::getline(std::cin, modeLine)) {
+        std::string modeInput = trimAndClean(modeLine);
+        if (modeInput == "2") {
+            mode = GameMode::PlayerVsAI_White;
+            std::cout << "Selected: Playing as White vs Computer.\n";
+        } else if (modeInput == "3") {
+            mode = GameMode::PlayerVsAI_Black;
+            std::cout << "Selected: Playing as Black vs Computer.\n";
+        } else if (modeInput == "4") {
+            mode = GameMode::AIVsAI;
+            std::cout << "Selected: Computer vs Computer match.\n";
+        } else {
+            mode = GameMode::TwoPlayer;
+            std::cout << "Selected: Human vs Human (Two Player).\n";
+        }
+    }
+
+    std::cout << "\nHow to enter moves:\n";
     std::cout << "  - Coordinate:  'g1f3' or 'g1-f3' or 'e2e4'\n";
     std::cout << "  - Algebraic:   'Nf3' or 'Nc3' or 'e4' or 'O-O'\n";
     std::cout << "Commands:\n";
     std::cout << "  - 'moves'  : list all currently legal moves\n";
+    std::cout << "  - 'ai'     : let computer make the move\n";
+    std::cout << "  - 'eval'   : show current board evaluation\n";
     std::cout << "  - 'resign' : forfeit the game\n";
     std::cout << "  - 'quit'   : exit the program\n";
 
     while (!isGameOver()) {
         ConsoleRenderer::render(board);
 
-        std::string prompt = (board.getSideToMove() == Color::White) ? "White" : "Black";
+        // Check if current turn belongs to the computer
+        bool isAITurn = false;
+        if (mode == GameMode::PlayerVsAI_White && board.getSideToMove() == Color::Black) {
+            isAITurn = true;
+        } else if (mode == GameMode::PlayerVsAI_Black && board.getSideToMove() == Color::White) {
+            isAITurn = true;
+        } else if (mode == GameMode::AIVsAI) {
+            isAITurn = true;
+        }
+
+        if (isAITurn) {
+            makeAIMove();
+            continue;
+        }
+
+        std::string prompt = (board.getSideToMove() == Color::White) ? "White ♔" : "Black ♚";
         std::cout << prompt << " to move > ";
         
         std::string line;
@@ -290,6 +368,22 @@ void Game::start() {
             Color winner = (board.getSideToMove() == Color::White) ? Color::Black : Color::White;
             std::cout << "\n" << (winner == Color::White ? "White" : "Black") << " wins by resignation!\n";
             break;
+        }
+
+        if (input == "ai") {
+            makeAIMove();
+            continue;
+        }
+
+        if (input == "eval") {
+            int score = Evaluator::evaluate(board);
+            double pawns = static_cast<double>(score) / 100.0;
+            std::cout << "\n📊 Evaluation: ";
+            if (pawns > 0) std::cout << "+" << pawns << " (White advantage)\n";
+            else if (pawns < 0) std::cout << pawns << " (Black advantage)\n";
+            else std::cout << "0.00 (Equal position)\n";
+            std::cout << "\n";
+            continue;
         }
 
         if (input == "moves") {

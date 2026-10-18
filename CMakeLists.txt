@@ -9,6 +9,7 @@ include_directories(include)
 file(GLOB_RECURSE SOURCES
     main.cpp
     src/*.cpp
+    src/AI/*.cpp
     src/UI/*.cpp
 )
 
