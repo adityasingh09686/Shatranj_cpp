@@ -10,7 +10,8 @@ Game::Game() : state(GameState::Ongoing) {
 static std::string trimAndClean(const std::string& str) {
     std::string clean;
     for (char c : str) {
-        if (!std::isspace(static_cast<unsigned char>(c))) {
+        unsigned char uc = static_cast<unsigned char>(c);
+        if (uc >= 33 && uc <= 126) {
             clean += c;
         }
     }
@@ -297,15 +298,10 @@ void Game::start() {
             int count = 0;
             for (const auto& m : moves) {
                 const Piece* p = board.getPieceAt(m.from);
-                char piecePrefix = ' ';
-                if (p && p->getType() == PieceType::Knight) piecePrefix = 'N';
-                else if (p && p->getType() == PieceType::Bishop) piecePrefix = 'B';
-                else if (p && p->getType() == PieceType::Rook) piecePrefix = 'R';
-                else if (p && p->getType() == PieceType::Queen) piecePrefix = 'Q';
-                else if (p && p->getType() == PieceType::King) piecePrefix = 'K';
+                std::string pieceSymbol = p ? ConsoleRenderer::getPieceSymbol(p) : "";
 
                 std::cout << m.from.toAlgebraic() << m.to.toAlgebraic();
-                if (piecePrefix != ' ') std::cout << "(" << piecePrefix << ")";
+                if (!pieceSymbol.empty()) std::cout << "(" << pieceSymbol << ")";
                 std::cout << "  ";
                 if (++count % 6 == 0) std::cout << "\n";
             }
