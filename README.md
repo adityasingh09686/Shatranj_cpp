@@ -1,10 +1,10 @@
-# Shatranj (शतरंज) ♟️
+# Shatranj++ (शतरंज++) 
 
 A clean, object-oriented C++14 Chess Engine and Console Game.
 
 ---
 
-## 🌟 Features
+## Features
 
 - **Full Chess Rules Implementation**:
   - All piece moves (Pawn, Knight, Bishop, Rook, Queen, King).
@@ -22,7 +22,7 @@ A clean, object-oriented C++14 Chess Engine and Console Game.
 
 ---
 
-## 🚀 Building & Running
+##  Building & Running
 
 ### Prerequisites
 - A C++14 compliant compiler (GCC / Clang / MSVC)
