@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { ChessPiece } from '../utils/chessPieces';
 import { SideColor } from '../types';
+import { BoardArrows } from './BoardArrows';
 
 interface ChessboardProps {
   fen: string;
@@ -11,6 +12,9 @@ interface ChessboardProps {
   sideToMove: SideColor;
   disabled?: boolean;
   onMove: (moveUCI: string) => void;
+  bestMove?: string;
+  threatMove?: string;
+  showArrows?: boolean;
 }
 
 export const Chessboard: React.FC<ChessboardProps> = ({
@@ -21,7 +25,10 @@ export const Chessboard: React.FC<ChessboardProps> = ({
   inCheck,
   sideToMove,
   disabled = false,
-  onMove
+  onMove,
+  bestMove,
+  threatMove,
+  showArrows = true
 }) => {
   const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
   const [pendingPromotion, setPendingPromotion] = useState<{ from: string; to: string } | null>(null);
@@ -255,6 +262,16 @@ export const Chessboard: React.FC<ChessboardProps> = ({
           })
         )}
       </div>
+
+      {/* SVG Move & Threat Arrows */}
+      {showArrows && (
+        <BoardArrows
+          bestMove={bestMove}
+          lastMove={lastMove}
+          threatMove={threatMove}
+          orientation={orientation}
+        />
+      )}
 
       {/* Pawn Promotion Dialog Modal */}
       {pendingPromotion && (

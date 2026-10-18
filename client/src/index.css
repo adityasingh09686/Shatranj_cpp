@@ -21,6 +21,23 @@
   --accent-rose: #f43f5e;
 }
 
+[data-theme="wood"] {
+  --board-light: #f0d9b5;
+  --board-dark: #b58863;
+}
+[data-theme="midnight"] {
+  --board-light: #4c566a;
+  --board-dark: #2e3440;
+}
+[data-theme="ocean"] {
+  --board-light: #cdd6f4;
+  --board-dark: #458588;
+}
+[data-theme="emerald"] {
+  --board-light: #eeeed2;
+  --board-dark: #769656;
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
@@ -1206,4 +1223,111 @@ code, pre, .font-mono {
   text-align: center;
   font-size: 0.75rem;
   color: var(--text-subtle);
+}
+
+/* Digital Chess Clocks */
+.digital-clock {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1.15rem;
+  font-weight: 800;
+  padding: 0.35rem 0.85rem;
+  border-radius: 0.65rem;
+  background: #0f172a;
+  color: #94a3b8;
+  border: 1px solid rgba(75, 85, 99, 0.5);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  transition: all 0.2s ease;
+}
+.digital-clock.active {
+  background: #1e293b;
+  color: #ffffff;
+  border-color: var(--accent-emerald);
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.3);
+}
+.digital-clock.low-time {
+  color: #fca5a5;
+  border-color: #ef4444;
+  background: rgba(239, 68, 68, 0.15);
+  animation: clockPulse 1s infinite alternate;
+}
+@keyframes clockPulse {
+  0% { transform: scale(1); }
+  100% { transform: scale(1.04); }
+}
+
+/* SVG Board Arrows Overlay */
+.board-arrows-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 25;
+}
+
+/* Training & Modals */
+.feature-tabs-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 0.85rem;
+  margin-bottom: 0.75rem;
+  overflow-x: auto;
+}
+.btn-tab {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.85rem;
+  border-radius: 0.6rem;
+  background: none;
+  border: 1px solid transparent;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+.btn-tab:hover {
+  color: #ffffff;
+  background: rgba(55, 65, 81, 0.4);
+}
+.btn-tab.active {
+  color: #a7f3d0;
+  background: rgba(16, 185, 129, 0.2);
+  border-color: rgba(16, 185, 129, 0.4);
+}
+
+/* Puzzle Trainer Card */
+.puzzle-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 1.25rem;
+  padding: 1.25rem;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+}
+.puzzle-feedback-badge {
+  padding: 0.35rem 0.8rem;
+  border-radius: 9999px;
+  font-weight: 800;
+  font-size: 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.puzzle-feedback-badge.correct {
+  background: rgba(16, 185, 129, 0.2);
+  color: #a7f3d0;
+  border: 1px solid #10b981;
+}
+.puzzle-feedback-badge.wrong {
+  background: rgba(244, 63, 94, 0.2);
+  color: #fecdd3;
+  border: 1px solid #f43f5e;
 }

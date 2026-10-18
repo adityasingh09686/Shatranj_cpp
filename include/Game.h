@@ -36,6 +36,7 @@ public:
 
     void start();
     void runApiMode();
+    void runUciMode();
     std::string processApiCommand(const std::string& jsonInput);
 
     bool processMove(const std::string& moveStr);

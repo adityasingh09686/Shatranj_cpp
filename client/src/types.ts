@@ -2,7 +2,12 @@ export type SideColor = 'white' | 'black';
 
 export type GameStatus = 'ongoing' | 'checkmate' | 'stalemate' | 'resigned' | 'draw_fifty_moves';
 
-export type GameMode = 'vs_custom_ai_white' | 'vs_custom_ai_black' | 'two_player' | 'vs_stockfish';
+export type GameMode = 
+  | 'vs_custom_ai_white' 
+  | 'vs_custom_ai_black' 
+  | 'two_player' 
+  | 'vs_stockfish' 
+  | 'spectator_ai_vs_ai';
 
 export interface GameState {
   ok: boolean;

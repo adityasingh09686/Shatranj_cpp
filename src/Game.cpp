@@ -1,5 +1,6 @@
 #include "Game.h"
 #include <iostream>
+#include <sstream>
 #include <algorithm>
 #include <cctype>
 
@@ -273,7 +274,7 @@ bool Game::processMove(const std::string& rawInput) {
 }
 
 Move Game::computeAIMove(int depth) {
-    return ai.findBestMove(board, depth);
+    return ai.findBestMove(board, depth, moveHistoryUCI);
 }
 
 void Game::makeAIMove() {
@@ -840,5 +841,73 @@ void Game::runApiMode() {
         }
         std::string resp = processApiCommand(line);
         std::cout << resp << "\n" << std::flush;
+    }
+}
+
+void Game::runUciMode() {
+    std::string line;
+    while (std::getline(std::cin, line)) {
+        std::string trimmed = trimAndClean(line);
+        if (trimmed.empty()) continue;
+
+        if (trimmed == "uci") {
+            std::cout << "id name Shatranj C++ Engine\n";
+            std::cout << "id author Aditya Singh\n";
+            std::cout << "option name Hash type spin default 32 min 1 max 1024\n";
+            std::cout << "uciok\n" << std::flush;
+        } else if (trimmed == "isready") {
+            std::cout << "readyok\n" << std::flush;
+        } else if (trimmed == "ucinewgame") {
+            reset();
+            ai.clearTranspositionTable();
+        } else if (trimmed.rfind("position", 0) == 0) {
+            // "position startpos" or "position startpos moves e2e4 e7e5..."
+            // or "position fen <fen> moves ..."
+            size_t movesIdx = trimmed.find("moves ");
+            std::string posType = trimmed.substr(9);
+
+            if (trimmed.find("position startpos") == 0) {
+                reset();
+            } else if (trimmed.find("position fen ") == 0) {
+                std::string fenStr = trimmed.substr(13, (movesIdx != std::string::npos ? movesIdx - 13 : std::string::npos));
+                reset();
+                board.loadFEN(fenStr);
+            }
+
+            if (movesIdx != std::string::npos) {
+                std::string movesPart = trimmed.substr(movesIdx + 6);
+                std::stringstream ss(movesPart);
+                std::string m;
+                while (ss >> m) {
+                    processMove(m);
+                }
+            }
+        } else if (trimmed.rfind("go", 0) == 0) {
+            // Parse depth if specified: "go depth 4"
+            int depth = aiDepth;
+            size_t dPos = trimmed.find("depth ");
+            if (dPos != std::string::npos) {
+                try {
+                    depth = std::stoi(trimmed.substr(dPos + 6));
+                } catch (...) {
+                    depth = aiDepth;
+                }
+            }
+            if (depth < 1) depth = 1;
+            if (depth > 6) depth = 6;
+
+            Move best = computeAIMove(depth);
+            std::string uci = best.from.toAlgebraic() + best.to.toAlgebraic();
+            if (best.flag == MoveFlag::Promotion) {
+                char promo = 'q';
+                if (best.promotionType == PieceType::Rook) promo = 'r';
+                else if (best.promotionType == PieceType::Bishop) promo = 'b';
+                else if (best.promotionType == PieceType::Knight) promo = 'n';
+                uci += promo;
+            }
+            std::cout << "bestmove " << uci << "\n" << std::flush;
+        } else if (trimmed == "quit" || trimmed == "exit") {
+            break;
+        }
     }
 }

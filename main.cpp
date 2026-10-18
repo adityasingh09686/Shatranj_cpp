@@ -8,6 +8,10 @@ int main(int argc, char* argv[]) {
             game.runApiMode();
             return 0;
         }
+        if (std::strcmp(argv[i], "--uci") == 0) {
+            game.runUciMode();
+            return 0;
+        }
     }
     game.start();
     return 0;
